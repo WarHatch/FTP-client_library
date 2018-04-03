@@ -1,22 +1,10 @@
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
 
-/**
- * A program demonstrates how to upload files from local computer to a remote
- * FTP server using Apache Commons Net API.
- * @author www.codejava.net
- */
-public class Main {
-
+public class Client {
     private static void showServerReply(FTPClient ftpClient) {
         String[] replies = ftpClient.getReplyStrings();
         if (replies != null && replies.length > 0) {
@@ -93,5 +81,31 @@ public class Main {
                 ex.printStackTrace();
             }
         }
-    }
+        //##############################################################
+
+        try {
+            String inputBuffer = null;
+            boolean exitFlag = false;
+
+            BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
+
+            System.out.println("*** Welcome to FTPclient ***");
+            while (!exitFlag) {
+                System.out.print("> ");
+                inputBuffer = consoleReader.readLine();
+
+                if (inputBuffer.matches("^exit") || inputBuffer.matches("^quit"))
+                    exitFlag = true;
+                else
+                {
+                    System.out.println("# Attempting anonymous login");
+                    
+                }
+            }
+        }
+        catch (Exception e){
+            System.err.println("Error #9999: Unexpected exception: "+
+                    e.getMessage());
+        }
+    } //---- End of main
 }
