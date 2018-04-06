@@ -1,3 +1,5 @@
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 import java.io.*;
 
 public class Client
@@ -10,7 +12,6 @@ public class Client
 
             System.out.println("*** Welcome to FTPclient ***");
 
-            String downloadPath = "D:/Downloads/FromFTP/";
 //          if (inputBuffer.matches("^exit") || inputBuffer.matches("^quit"))
 //              exitFlag = true;
 //          else
@@ -26,34 +27,43 @@ public class Client
             CMDconnection.GetServerResponse();
 
             System.out.println("- Attempting anonymous login");
-            System.out.println("localhost:21\nuser: 'anonymous'\npass: [email adress]"); //UNDONE t
+            System.out.println("localhost:21\nuser: 'anonymous'\npass: [email adress]");
             CMDconnection.SendToServer("USER " + user);
             CMDconnection.SendToServer("PASS " + pass);
 
             while (CMDconnection.ReadServerResponse()) {
             }
 
-            //UNDONE special send commands
             ServerConnection dataConnection = CMDconnection.EnterPassiveMode(true);
 
+            //FIXME messes up sometimes (det: The response message is in one line
             CMDconnection.SendToServer("LIST", true);
             CMDconnection.GetServerResponse();
+            dataConnection.ReadServerResponse();
+
+
+            CMDconnection.DownloadFile("textFile.txt", 18);
+            CMDconnection.ReadServerResponse();
+            CMDconnection.DownloadFile("sortgif.gif", 328089); //FIXME unhandled exception if size is too big (file received whole)
+            CMDconnection.ReadServerResponse();
 
             //----------------- User interaction block
             String inputBuffer = null;
             boolean exitFlag = false;
             while (!exitFlag) {
                 CMDconnection.ReadServerResponse();
-                dataConnection.ReadServerResponse();
+                //dataConnection.ReadServerResponse();
 
                 System.out.print(">");
                 inputBuffer = consoleReader.readLine();
 
                 if (!inputBuffer.equals(""))
-                    CMDconnection.SendToServer(inputBuffer);
-
-//              inputBuffer = null;
-//              outputBuffer = null;
+                    try {
+                        CMDconnection.SendToServer(inputBuffer);
+                    }
+                    catch (NotImplementedException e){
+                        System.err.println("Error 1000: Command not yet handleable: " + inputBuffer);
+                    }
             } //End of any User Interaction
 
             dataConnection.Close();
