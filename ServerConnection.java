@@ -3,6 +3,7 @@ import java.net.Socket;
 
 //TODO make father class that doesn't have Command methods
 
+@SuppressWarnings("StatementWithEmptyBody")
 public class ServerConnection {
     private Socket socket;
     private OutputStream server_out;
@@ -10,18 +11,16 @@ public class ServerConnection {
     BufferedReader dataReader;
     PrintWriter dataWriter;
 
-    private byte[] dataBuff = new byte[1024];
-
-    //TODO add a dataCommand Hash
+    //TODO add a dataCommand Hash?
     private static final String[] dataCommands = {"STOR", "RETR"};
-
-    String messagePrefix = "# ";
+    private byte[] dataBuff = new byte[4096];
+    private String messagePrefix = "# ";
 
     public InputStream getServer_in() {
         return server_in;
     }
 
-    public ServerConnection(String ip, int port) throws IOException {
+    ServerConnection(String ip, int port) throws IOException {
             socket = new Socket(ip, port);
             try{
                 server_out = socket.getOutputStream();
@@ -35,31 +34,36 @@ public class ServerConnection {
             }
     }
 
-    public ServerConnection(String ip, int port, String serverMessagePrefix) throws IOException {
+    ServerConnection(String ip, int port, String serverMessagePrefix) throws IOException {
         this(ip, port);
         this.messagePrefix = serverMessagePrefix;
     }
 
-    public void PrintMessage(String message)
+    private void PrintMessage(String message)
     {
         System.out.println(messagePrefix + message);
     }
 
-    public String GetServerResponse()
+    public String WaitAndGetServerResponse()
     {
-        //TODO Add timeout
-        String server_response = "";
+        String server_response = null;
+
+        long waitTime = 5000;
+        long endWait = System.currentTimeMillis() + waitTime;
         try {
             while (!dataReader.ready()) {
-                //just waits
+                if (System.currentTimeMillis() > endWait) {
+                    throw new IOException("Response from server timeout at "+ waitTime +"ms");
+                }
             }
+            server_response = dataReader.readLine();
             while (dataReader.ready()) {
-                server_response += dataReader.readLine();
+                server_response += "\n" + dataReader.readLine();
             }
         }
         catch (IOException e)
         {
-            System.err.println("Error #9998: Server response exception: "+ e.getMessage());
+            System.err.println("Warning #300: Server response exception: "+ e.getMessage());
         }
 
         PrintMessage(server_response);
@@ -95,7 +99,7 @@ public class ServerConnection {
 //        else
             dataWriter.println(message);
 
-        return GetServerResponse();
+        return WaitAndGetServerResponse();
     }
 
     public String SendToServer(String message, boolean echo)
@@ -112,21 +116,21 @@ public class ServerConnection {
         dataWriter.close();
         server_out.close();
         server_in.close();
-        return;
     }
 
+    //UNDONE needs rework
     private boolean isDataCommand(String message)
     {
         String command = message.split(" ", 1)[0];
-        for (int i = 0; i < dataCommands.length; i++) {
-            if (dataCommands[i].equals(command))
+        for (String dataCommand : dataCommands) {
+            if (dataCommand.equals(command))
                 return true;
         }
 
         return false;
     }
 
-    public ServerConnection EnterPassiveMode(boolean echo)
+    private ServerConnection EnterPassiveMode(boolean echo)
     {
         String message = "PASV";
 
@@ -163,11 +167,20 @@ public class ServerConnection {
         return null;
     }
 
-    public boolean DownloadFile(String fileName, int fileSize)
+    public String DownloadFileList ()
+    {
+        ServerConnection dataConnection = EnterPassiveMode(false);
+        SendToServer("LIST", true);
+        WaitAndGetServerResponse();
+
+        return dataConnection.WaitAndGetServerResponse();
+    }
+
+    public boolean DownloadFile(String fileName, String downloadPath)
     {
         boolean result = false;
 
-        File outFile = new File(fileName);
+        File outFile = new File(downloadPath+fileName);
         try {
             if(outFile.exists()) {
                 outFile.delete();
@@ -180,19 +193,24 @@ public class ServerConnection {
 
             SendToServer("RETR " + fileName, true);
 
-            long size = fileSize;
-            long len = 0;
-            int recv = 0;
-            if (size > 0) {
-                while (len + recv < size) {
-                    len += recv;
-                    recv = dataInStream.read(dataBuff,0,dataBuff.length);
-                    fileOutputStream.write(dataBuff,0,recv);
-                }
+            int bytesRead = -1;
+            while ((bytesRead = dataInStream.read(dataBuff)) != -1) {
+                fileOutputStream.write(dataBuff, 0, bytesRead);
             }
+            //Alternative
+//            long size = fileSize;
+//            long len = 0;
+//            int recv = 0;
+//            if (size > 0) {
+//                while (len + recv < size) {
+//                    len += recv;
+//                    recv = dataInStream.read(dataBuff,0,dataBuff.length);
+//                    fileOutputStream.write(dataBuff,0,recv);
+//                }
+//            }
 
             fileOutputStream.close();
-            if (outFile.length() != 0) { //Fixme doesn't seem to work if file is empty
+            if (outFile.length() != 0) {
                 System.out.println("- Received file " + fileName);
                 result = true;
             } else {
@@ -201,7 +219,7 @@ public class ServerConnection {
             }
 
         } catch (IOException e) {
-            System.out.println("Error #9997 downloading the file: " +e);
+            System.out.println("Error #9998: Unexpected Error downloading the file: " +e);
         }
         return result;
     }

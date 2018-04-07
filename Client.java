@@ -24,27 +24,19 @@ public class Client
 
             ServerConnection CMDconnection = new ServerConnection(serverIP, FTPport);
 
-            CMDconnection.GetServerResponse();
+            CMDconnection.WaitAndGetServerResponse();
 
             System.out.println("- Attempting anonymous login");
             System.out.println("localhost:21\nuser: 'anonymous'\npass: [email adress]");
             CMDconnection.SendToServer("USER " + user);
             CMDconnection.SendToServer("PASS " + pass);
 
-            while (CMDconnection.ReadServerResponse()) {
-            }
-
-            ServerConnection dataConnection = CMDconnection.EnterPassiveMode(true);
-
-            //FIXME messes up sometimes (det: The response message is in one line
-            CMDconnection.SendToServer("LIST", true);
-            CMDconnection.GetServerResponse();
-            dataConnection.ReadServerResponse();
-
-
-            CMDconnection.DownloadFile("textFile.txt", 18);
             CMDconnection.ReadServerResponse();
-            CMDconnection.DownloadFile("sortgif.gif", 328089); //FIXME unhandled exception if size is too big (file received whole)
+
+            //FIXME If gets 226 with 125 - freezes up (Replication: DEBUG with break in WaitAndGetServerResponse)
+            CMDconnection.DownloadFileList();
+
+            CMDconnection.DownloadFile("BAD FILE.pdf","D:\\Downloads\\FromFTP\\");
             CMDconnection.ReadServerResponse();
 
             //----------------- User interaction block
@@ -66,7 +58,6 @@ public class Client
                     }
             } //End of any User Interaction
 
-            dataConnection.Close();
             CMDconnection.Close();
         }
         catch (Exception e){
