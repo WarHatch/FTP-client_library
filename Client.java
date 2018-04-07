@@ -22,7 +22,7 @@ public class Client
             String user = "anonymous";
             String pass = "gelinislakavimas@one.lt";
 
-            ServerConnection CMDconnection = new ServerConnection(serverIP, FTPport);
+            FTPCMDConnection CMDconnection = new FTPCMDConnection(serverIP, FTPport);
 
             CMDconnection.WaitAndGetServerResponse();
 
@@ -36,7 +36,7 @@ public class Client
             //FIXME If gets 226 with 125 - freezes up (Replication: DEBUG with break in WaitAndGetServerResponse)
             CMDconnection.DownloadFileList();
 
-            CMDconnection.DownloadFile("BAD FILE.pdf","D:\\Downloads\\FromFTP\\");
+            CMDconnection.DownloadFile("text.txt","D:\\Downloads\\FromFTP\\");
             CMDconnection.ReadServerResponse();
 
             //----------------- User interaction block
@@ -44,18 +44,19 @@ public class Client
             boolean exitFlag = false;
             while (!exitFlag) {
                 CMDconnection.ReadServerResponse();
-                //dataConnection.ReadServerResponse();
 
                 System.out.print(">");
                 inputBuffer = consoleReader.readLine();
 
-                if (!inputBuffer.equals(""))
-                    try {
+                if (!inputBuffer.equals("")) {
+                    if (inputBuffer.matches("^close") || inputBuffer.matches("^exit"))
+                        exitFlag = true;
+                    else try {
                         CMDconnection.SendToServer(inputBuffer);
-                    }
-                    catch (NotImplementedException e){
+                    } catch (NotImplementedException e) {
                         System.err.println("Error 1000: Command not yet handleable: " + inputBuffer);
                     }
+                }
             } //End of any User Interaction
 
             CMDconnection.Close();
@@ -63,6 +64,7 @@ public class Client
         catch (Exception e){
             System.err.println("Error #9999: Unexpected exception: "+
                     e.getMessage());
+            e.printStackTrace();
         }
 
         System.out.println("*** Goodbye! ***");
