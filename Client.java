@@ -33,10 +33,14 @@ public class Client
 
             CMDconnection.ReadServerResponse();
 
-            //FIXME If gets 226 with 125 - freezes up (Replication: DEBUG with break in WaitAndGetServerResponse)
             CMDconnection.DownloadFileList();
 
+//            CMDconnection.DownloadFile("FINALBOSS.zip","D:\\Downloads\\FromFTP\\");
             CMDconnection.DownloadFile("text.txt","D:\\Downloads\\FromFTP\\");
+            CMDconnection.ReadServerResponse();
+
+            CMDconnection.UploadFile("D:\\Programavimas\\JAVA\\IdeaProjects\\FTPclient\\", "103MB.zip", "");
+//            CMDconnection.UploadFile("D:\\Programavimas\\JAVA\\IdeaProjects\\FTPclient\\", "FromClient.txt", "");
             CMDconnection.ReadServerResponse();
 
             //----------------- User interaction block
@@ -59,7 +63,7 @@ public class Client
                 }
             } //End of any User Interaction
 
-            CMDconnection.Close();
+            CMDconnection.close();
         }
         catch (Exception e){
             System.err.println("Error #9999: Unexpected exception: "+
