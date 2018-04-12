@@ -21,8 +21,10 @@ public class Client
             String serverIP = "localhost";
             String user = "anonymous";
             String pass = "gelinislakavimas@one.lt";
+            String downloadPath = "D:\\Downloads\\FromFTP\\";
+            System.out.println("Your download path is: " + downloadPath);
 
-            FTPCMDConnection CMDconnection = new FTPCMDConnection(serverIP, FTPport);
+            FTPCMDConnection CMDconnection = new FTPCMDConnection(serverIP, FTPport, downloadPath);
 
             CMDconnection.WaitAndGetServerResponse();
 
@@ -33,15 +35,11 @@ public class Client
 
             CMDconnection.ReadServerResponse();
 
-            CMDconnection.DownloadFileList();
-
-//            CMDconnection.DownloadFile("FINALBOSS.zip","D:\\Downloads\\FromFTP\\");
-            CMDconnection.DownloadFile("text.txt","D:\\Downloads\\FromFTP\\");
-            CMDconnection.ReadServerResponse();
-
-            CMDconnection.UploadFile("D:\\Programavimas\\JAVA\\IdeaProjects\\FTPclient\\", "103MB.zip", "");
-//            CMDconnection.UploadFile("D:\\Programavimas\\JAVA\\IdeaProjects\\FTPclient\\", "FromClient.txt", "");
-            CMDconnection.ReadServerResponse();
+//            TESTING pre-written lines
+//            CMDconnection.SendToServer("LIST", true);
+//            CMDconnection.SendToServer("RETR text.txt", true);
+//            //D:\Programavimas\JAVA\IdeaProjects\FTPclient\FromClient.txt
+//            CMDconnection.SendToServer("STOR ", true); //Empty path arg
 
             //----------------- User interaction block
             String inputBuffer = null;
@@ -55,11 +53,12 @@ public class Client
                 if (!inputBuffer.equals("")) {
                     if (inputBuffer.matches("^close") || inputBuffer.matches("^exit"))
                         exitFlag = true;
-                    else try {
-                        CMDconnection.SendToServer(inputBuffer);
-                    } catch (NotImplementedException e) {
-                        System.err.println("Error 1000: Command not yet handleable: " + inputBuffer);
-                    }
+                    else if (inputBuffer.length() >= 4) //FTP commands are all 4 letters + [arguments]
+                        try {
+                            CMDconnection.SendToServer(inputBuffer);
+                        } catch (NotImplementedException e) {
+                            System.err.println("Error 1000: Command not yet handleable: " + inputBuffer);
+                        }
                 }
             } //End of any User Interaction
 

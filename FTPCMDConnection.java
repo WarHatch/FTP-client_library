@@ -1,22 +1,16 @@
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 import java.io.*;
-import java.net.Socket;
-import java.text.ParseException;
-import java.util.regex.Pattern;
 
 @SuppressWarnings("StatementWithEmptyBody")
-public class FTPCMDConnection extends ServerConnection implements Closeable {
-
-    //TODO add a dataCommand Hash?
-    private static final String[] dataCommands = {"STOR", "RETR"};
+public class FTPCMDConnection extends ServerConnection {
+    String downloadPath = null;
 
     FTPCMDConnection(String ip, int port) {
         super(ip, port);
     }
 
-    FTPCMDConnection(String ip, int port, String serverMessagePrefix) {
-        super(ip, port, serverMessagePrefix);
+    FTPCMDConnection(String ip, int port, String downloadPath) {
+        super(ip, port);
+        this.downloadPath = downloadPath;
     }
 
     public String WaitAndGetServerResponse(String specificResponse) throws IOException {
@@ -41,31 +35,50 @@ public class FTPCMDConnection extends ServerConnection implements Closeable {
         return fittingResponse;
     }
 
-    //TODO add a CMD input from console with CMD recognition
-//    public String SendToServer(String message)
-//    {
-////        if (isDataCommand(message))
-////        {
-////            //provide a dataConnection?
-////            //use Function Hash?
-////            throw new NotImplementedException();
-////        }
-////        else
-//        dataWriter.println(message);
-//
-//        return WaitAndGetServerResponse();
-//    }
-//
-//    private boolean isDataCommand(String message)
-//    {
-//        String command = message.split(" ", 1)[0];
-//        for (String dataCommand : dataCommands) {
-//            if (dataCommand.equals(command))
-//                return true;
-//        }
-//
-//        return false;
-//    }
+    //If it's a command requiring to a open a data connection this class' method is called. Else ServerConnection method is called
+    public String SendToServer(String message)
+    {
+        String serverResponse = null;
+
+        String command = message.substring(0, 4);
+        command = command.toUpperCase();
+
+        switch (command) {
+            case "LIST":
+                DownloadFileList();
+                break;
+            case "RETR":
+                DownloadFile(downloadPath, message.substring(5));
+                break;
+            case "STOR":
+                System.out.println("Enter filePath of the file to upload");
+                BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
+                try {
+                    String filePath = consoleReader.readLine();
+                    UploadFile(filePath, message.substring(5));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+            default:
+                dataWriter.println(message);
+                try {
+                    serverResponse = WaitAndGetServerResponse();
+                } catch (IOException e) {
+                    System.err.println(e.getMessage());
+                }
+                break;
+        }
+        return serverResponse;
+    }
+
+    public String SendToServer(String message, boolean echo)
+    {
+        if (echo)
+            System.out.println("- " + message);
+
+        return SendToServer(message);
+    }
 
     private ServerConnection EnterPassiveMode(boolean echo)
     {
@@ -81,7 +94,7 @@ public class FTPCMDConnection extends ServerConnection implements Closeable {
 
             String passiveModePattern = "^227.*\\(?\\d+,\\d+,\\d+,\\d+,\\d+,\\d+\\)?\\.?";
             if (serverResponse.matches(passiveModePattern)) {
-                String ip_port = serverResponse.split("[()]")[1]; //Possible miscomunication if reply doesn't have parenthesis
+                String ip_port = serverResponse.split("[()]")[1]; //Possible miscommunication if reply doesn't have parenthesis
                 String[] numbers = ip_port.split(",");
 
                 String ip = "";
@@ -108,7 +121,7 @@ public class FTPCMDConnection extends ServerConnection implements Closeable {
     public String DownloadFileList ()
     {
         ServerConnection dataConnection = EnterPassiveMode(false);
-        SendToServer("LIST", true);
+        dataWriter.println("LIST");
         ReadServerResponse();
 
         String response = null;
@@ -123,11 +136,18 @@ public class FTPCMDConnection extends ServerConnection implements Closeable {
         return response;
     }
 
-    public boolean DownloadFile(String fileName, String downloadPath)
+    private String ExtractFileName(String filePath)
+    {
+        int pointToFileName = filePath.lastIndexOf('\\') + 1;
+        return filePath.substring(pointToFileName);
+    }
+
+    public boolean DownloadFile(String downloadPath, String filePath)
     {
         boolean result = false;
 
-        File outFile = new File(downloadPath+fileName);
+        String fileName = ExtractFileName(filePath);
+        File outFile = new File(downloadPath + fileName);
         try {
             if(outFile.exists()) {
                 outFile.delete();
@@ -138,7 +158,7 @@ public class FTPCMDConnection extends ServerConnection implements Closeable {
             ServerConnection dataConnection = this.EnterPassiveMode(true); //retrieves a port/IStream that the data will be sent to
             InputStream dataInStream = dataConnection.getServer_in();
 
-            SendToServer("RETR " + fileName, true);
+            dataWriter.println("RETR " + filePath);
 
             int bytesRead = -1;
             while ((bytesRead = dataInStream.read(dataBuff)) != -1) {
@@ -165,11 +185,12 @@ public class FTPCMDConnection extends ServerConnection implements Closeable {
         return result;
     }
 
-    public boolean UploadFile(String filePath, String fileName, String uploadPath)
+    public boolean UploadFile(String filePath, String uploadPath)
     {
         boolean result = false;
+        String fileName = ExtractFileName(filePath);
 
-        File sendFile = new File(filePath+fileName);
+        File sendFile = new File(filePath);
         try {
             if(!sendFile.exists()) {
                 throw new FileNotFoundException(sendFile.getAbsolutePath());
@@ -179,7 +200,7 @@ public class FTPCMDConnection extends ServerConnection implements Closeable {
             ServerConnection dataConnection = this.EnterPassiveMode(true); //retrieves a port that the data will be sent through
             OutputStream dataOutStream = dataConnection.getServer_out();
 
-            SendToServer("STOR " + uploadPath+fileName, true); //
+            dataWriter.println("STOR " + uploadPath+fileName);
 
             int bytesRead = -1;
             while ((bytesRead = fileInputStream.read(dataBuff)) != -1) {

@@ -85,27 +85,6 @@ public class ServerConnection implements Closeable {
         return false;
     }
 
-    public String SendToServer(String message)
-    {
-        dataWriter.println(message);
-
-        String serverResponse = null;
-        try {
-            serverResponse = WaitAndGetServerResponse();
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
-        }
-        return serverResponse;
-    }
-
-    public String SendToServer(String message, boolean echo)
-    {
-        if (echo)
-            System.out.println("- " + message);
-
-        return SendToServer(message);
-    }
-
     @Override
     public void close() throws IOException {
         socket.close();
