@@ -13,7 +13,7 @@ public class FTPCMDConnection extends ServerConnection {
         this.downloadPath = downloadPath;
     }
 
-    public String WaitAndGetServerResponse(String specificResponse) throws IOException {
+    private String WaitAndGetServerResponse(String specificResponse) throws IOException {
         String fittingResponse = null;
 
         long waitTime = 5000;
@@ -30,7 +30,6 @@ public class FTPCMDConnection extends ServerConnection {
             }
         }
         fittingResponse = serverResponse; //This only gets reached if search doesn't time-out
-
 
         return fittingResponse;
     }
@@ -52,8 +51,7 @@ public class FTPCMDConnection extends ServerConnection {
                 break;
             case "STOR":
                 System.out.println("Enter filePath of the file to upload");
-                BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
-                try {
+                try (BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));){
                     String filePath = consoleReader.readLine();
                     UploadFile(filePath, message.substring(5));
                 } catch (IOException e) {
@@ -80,8 +78,7 @@ public class FTPCMDConnection extends ServerConnection {
         return SendToServer(message);
     }
 
-    private ServerConnection EnterPassiveMode(boolean echo)
-    {
+    private ServerConnection EnterPassiveMode(boolean echo) throws IOException {
         String message = "PASV";
 
         if (echo)
@@ -89,51 +86,49 @@ public class FTPCMDConnection extends ServerConnection {
 
         // Custom variant of SendToServer(message) since a SPECIFIC response is REQUIRED;
         dataWriter.println(message);
-        try {
-            String serverResponse = WaitAndGetServerResponse("227");
 
-            String passiveModePattern = "^227.*\\(?\\d+,\\d+,\\d+,\\d+,\\d+,\\d+\\)?\\.?";
-            if (serverResponse.matches(passiveModePattern)) {
-                String ip_port = serverResponse.split("[()]")[1]; //Possible miscommunication if reply doesn't have parenthesis
-                String[] numbers = ip_port.split(",");
+        String serverResponse = WaitAndGetServerResponse("227");
 
-                String ip = "";
-                for (int i = 0; i < 3; i++)
-                    ip += numbers[i] + ".";
-                ip += numbers[3];
-                //System.out.print(ip);
+        String passiveModePattern = "^227.*\\(?\\d+,\\d+,\\d+,\\d+,\\d+,\\d+\\)?\\.?";
+        if (serverResponse.matches(passiveModePattern)) {
+            String ip_port = serverResponse.split("[()]")[1]; //Possible miscommunication if reply doesn't have parenthesis
+            String[] numbers = ip_port.split(",");
 
-                int port = (Integer.parseInt(numbers[4]) * 256 + Integer.parseInt(numbers[5]));
-                System.out.println("- Data connection on port: " + port);
+            String ip = "";
+            for (int i = 0; i < 3; i++)
+                ip += numbers[i] + ".";
+            ip += numbers[3];
+            //System.out.print(ip);
 
-                ServerConnection dataConnection = new ServerConnection(ip, port, port + "#");
-                return dataConnection;
-            }
+            int port = (Integer.parseInt(numbers[4]) * 256 + Integer.parseInt(numbers[5]));
+            System.out.println("- Data connection on port: " + port);
+
+            ServerConnection dataConnection = new ServerConnection(ip, port, port + "#");
+            return dataConnection;
         }
-        catch (IOException e)
-        {
-            System.err.println("Error #3: Failed to enter passive mode.");
-        }
+        else throw new CharConversionException("Error #9981: Unexpected exception. " +
+                "ServerResponse '" + serverResponse + "' doesn't match passiveModePattern '" + passiveModePattern + "'");
+//        catch (IOException e)
+//        {
+//            System.err.println("Error #3: Failed to enter passive mode.");
+//        }
 
-        return null;
     }
 
     public String DownloadFileList ()
     {
-        ServerConnection dataConnection = EnterPassiveMode(false);
-        dataWriter.println("LIST");
-        ReadServerResponse();
-
-        String response = null;
         try {
-            response = dataConnection.WaitAndGetServerResponse();
+            ServerConnection dataConnection = EnterPassiveMode(false);
+            dataWriter.println("LIST");
+            ReadServerResponse();
+            return dataConnection.WaitAndGetServerResponse();
         }
         catch (IOException e)
         {
             System.err.println(e.getMessage());
         }
 
-        return response;
+        return null;
     }
 
     private String ExtractFileName(String filePath)
@@ -225,7 +220,7 @@ public class FTPCMDConnection extends ServerConnection {
             System.err.println("Error #4: Couldn't find the file specified: " +e.getMessage());
         }
         catch (IOException e) {
-            System.err.println("Error #9998: Unexpected Error downloading the file: " +e);
+            System.err.println("Error #9997: Unexpected Error uploading the file: " +e);
         }
 
         return result;
