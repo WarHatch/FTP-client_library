@@ -20,13 +20,13 @@ Interaction with non windows file systems hasn't been tested.
 * SYST
 * PWD, CWD, RMD, MKD
 
-###TODO:
+### TODO:
 * RENAME FROM/TO (RNFR/RNTO)
 * Implement STAT usage in long transfers
 * Add server connection args on launch
 * ABOR
 
-###TODO maybe:
+### TODO maybe:
 * Transfer parameter commands(TYPE, MODE, STRU)
 * STOU
 * APPEND 
