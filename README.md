@@ -19,12 +19,12 @@ Interaction with non windows file systems hasn't been tested.
 * NOOP
 * SYST
 * PWD, CWD, RMD, MKD
+* RENAME FROM/TO (RNFR/RNTO)
 
 ### TODO:
-* RENAME FROM/TO (RNFR/RNTO)
 * Implement STAT usage in long transfers
-* Add server connection args on launch
 * ABOR
+* Add server connection args on launch
 
 ### TODO maybe:
 * Transfer parameter commands(TYPE, MODE, STRU)

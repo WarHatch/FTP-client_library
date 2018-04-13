@@ -51,8 +51,7 @@ public class FTPCMDConnection extends ServerConnection {
                 break;
             case "STOR":
                 System.out.println("Enter filePath of the file to upload");
-                BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
-                try {
+                try (BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));){
                     String filePath = consoleReader.readLine();
                     UploadFile(filePath, message.substring(5));
                 } catch (IOException e) {
