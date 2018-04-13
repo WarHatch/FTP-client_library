@@ -9,6 +9,7 @@ Interaction with non windows file systems hasn't been tested.
 **Data type:**
 * RETR
 * STOR
+* STOU
 * LIST
 * PASV
 
@@ -20,13 +21,9 @@ Interaction with non windows file systems hasn't been tested.
 * SYST
 * PWD, CWD, RMD, MKD
 * RENAME FROM/TO (RNFR/RNTO)
+* STAT
 
-### TODO:
-* Implement STAT usage in long transfers
-* ABOR
-* Add server connection args on launch
-
-### TODO maybe:
+### TODO in the future:
 * Transfer parameter commands(TYPE, MODE, STRU)
-* STOU
 * APPEND 
+* ABOR

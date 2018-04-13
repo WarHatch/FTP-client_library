@@ -1,7 +1,10 @@
 import java.io.*;
 
 @SuppressWarnings("StatementWithEmptyBody")
+//Data connection are established using PASV
 public class FTPCMDConnection extends ServerConnection {
+    private BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
+
     String downloadPath = null;
 
     FTPCMDConnection(String ip, int port) {
@@ -34,12 +37,24 @@ public class FTPCMDConnection extends ServerConnection {
         return fittingResponse;
     }
 
+    private String extractArgs(String message) //Experimental
+    {
+        if (message.length() < 5)
+            return "";
+        return message.substring(5);
+    }
+
+    private String AskForPathname() throws IOException {
+        System.out.println("Enter pathname of the file to upload");
+        return consoleReader.readLine();
+    }
+
     //If it's a command requiring to a open a data connection this class' method is called. Else ServerConnection method is called
     public String SendToServer(String message)
     {
         String serverResponse = null;
 
-        String command = message.substring(0, 4);
+        String command = message.substring(0, Math.min(4, message.length()));
         command = command.toUpperCase();
 
         switch (command) {
@@ -47,13 +62,25 @@ public class FTPCMDConnection extends ServerConnection {
                 DownloadFileList();
                 break;
             case "RETR":
-                DownloadFile(downloadPath, message.substring(5));
+                String args = extractArgs(message);
+                if (args.length() > 0)
+                    DownloadFile(downloadPath, extractArgs(message));
+                else
+                    System.out.println("You forgot to enter the pathname of file you're trying to download\n" +
+                            "Try writing RETR [filename] again");
                 break;
             case "STOR":
-                System.out.println("Enter filePath of the file to upload");
-                try (BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));){
-                    String filePath = consoleReader.readLine();
-                    UploadFile(filePath, message.substring(5));
+                try {
+                    String filePath = AskForPathname();
+                    UploadFile(filePath, extractArgs(message));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case "STOU":
+                try {
+                    String filePath = AskForPathname();
+                    UploadFile(filePath, extractArgs(message), true);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -137,6 +164,7 @@ public class FTPCMDConnection extends ServerConnection {
         return filePath.substring(pointToFileName);
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public boolean DownloadFile(String downloadPath, String filePath)
     {
         boolean result = false;
@@ -147,10 +175,14 @@ public class FTPCMDConnection extends ServerConnection {
             if(outFile.exists()) {
                 outFile.delete();
             }
-            outFile.createNewFile();
+            //If file is not successfully created it can't download
+            if(!outFile.createNewFile()){
+                throw new FileNotFoundException("Unable to download to specified path: '" +outFile.getAbsolutePath() + "'");
+            }
             FileOutputStream fileOutputStream = new FileOutputStream(outFile);
 
-            ServerConnection dataConnection = this.EnterPassiveMode(true); //retrieves a port/IStream that the data will be sent to
+            //retrieves a port/IStream that the data will be sent to
+            ServerConnection dataConnection = this.EnterPassiveMode(true);
             InputStream dataInStream = dataConnection.getServer_in();
 
             dataWriter.println("RETR " + filePath);
@@ -164,23 +196,34 @@ public class FTPCMDConnection extends ServerConnection {
             fileOutputStream.close();
             dataInStream.close();
         }
-        catch (IOException e) {
-            System.out.println("Error #9998: Unexpected Error downloading the file: " +e);
+        catch (FileNotFoundException e)
+        {
+            System.err.println("Error #7: " +e);
         }
+        catch (IOException e) {
+            System.err.println("Error #9998: Unexpected Error downloading the file: " +e);
+            e.printStackTrace();
+        }
+
         finally {
             if (outFile.length() != 0)
             {
-                System.out.println("- Received file " + fileName);
+                System.out.println("- Received file '" + fileName + "'");
                 result = true;
             } else {
-                System.err.println("- Failed to download file " + fileName);
+                System.err.println("- Failed to download file '" + fileName + "'");
                 outFile.delete();
             }
         }
         return result;
     }
 
-    public boolean UploadFile(String filePath, String uploadPath)
+    private boolean UploadFile(String filePath, String uploadPath)
+    {
+        return UploadFile(filePath, uploadPath, false);
+    }
+
+    public boolean UploadFile(String filePath, String uploadPath, boolean unique)
     {
         boolean result = false;
         String fileName = ExtractFileName(filePath);
@@ -195,7 +238,10 @@ public class FTPCMDConnection extends ServerConnection {
             ServerConnection dataConnection = this.EnterPassiveMode(true); //retrieves a port that the data will be sent through
             OutputStream dataOutStream = dataConnection.getServer_out();
 
-            dataWriter.println("STOR " + uploadPath+fileName);
+            if (unique)
+                dataWriter.println("STOU " + uploadPath+fileName);
+            else
+                dataWriter.println("STOR " + uploadPath+fileName);
 
             int bytesRead = -1;
             while ((bytesRead = fileInputStream.read(dataBuff)) != -1) {
@@ -213,7 +259,7 @@ public class FTPCMDConnection extends ServerConnection {
                 System.out.println("- Uploaded file " + fileName);
             }
             else
-                System.err.println("Warning #226: Server did not close the dataConnection or file did not upload correctly.");
+                System.err.println("Error #226: Server did not close the dataConnection or file did not upload correctly.");
         }
         catch (FileNotFoundException e)
         {

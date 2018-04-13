@@ -6,18 +6,35 @@ public class Client
 {
     static final int FTPport = 21; //For commands
 
+    private static void printHelp()
+    {
+        System.out.println(
+                "RETR [FTPpathname] - downloads a file at pathname to your currently specified download directory\n" +
+                "STOR [FTPpath] - uploads a file to the specified FTPpath\n" +
+                "LIST - shows all files in current FTP directory\n" +
+                "RNFR [FTPpathname] - specify which file you want to rename (follow up with RNTO)\n" +
+                "RNTO [newpathname] - change file's name\n" +
+                "CWD [FTPpath] - change working directory\n" +
+                "RMD|MKD [FTPpath] - remove|make a directory at FTPpath\n" +
+                "PWD - prints working directory name\n" +
+                "program also recognizes some other standard FTP commands\n" +
+                "QUIT - disconnects from the FTP server\n" +
+                "EXIT or CLOSE - exits the program"
+        );
+    }
+
     public static void main(String[] args) {
         try {
             BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
             System.out.println("*** Welcome to FTPclient ***");
+            printHelp();
 
 //          if (inputBuffer.matches("^exit") || inputBuffer.matches("^quit"))
 //              exitFlag = true;
 //          else
 //          {
 
-            //TODO add params input
             String serverIP = "localhost";
             String user = "anonymous";
             String pass = "gelinislakavimas@one.lt";
@@ -53,7 +70,7 @@ public class Client
                 if (!inputBuffer.equals("")) {
                     if (inputBuffer.matches("^close") || inputBuffer.matches("^exit"))
                         exitFlag = true;
-                    else if (inputBuffer.length() >= 4) //FTP commands are all 4 letters + [arguments]
+                    else
                         try {
                             CMDconnection.SendToServer(inputBuffer);
                         } catch (NotImplementedException e) {
